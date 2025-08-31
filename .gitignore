@@ -2,10 +2,10 @@
 __pycache__/
 *.py[codz]
 *$py.class
-
+qb-companies-77fce00085df.json
 # C extensions
 *.so
-
+.json
 # Distribution / packaging
 .Python
 build/
@@ -143,7 +143,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-
+.json
 # Spyder project settings
 .spyderproject
 .spyproject
