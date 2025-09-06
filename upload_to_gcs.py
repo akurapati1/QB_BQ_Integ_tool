@@ -9,7 +9,11 @@ from dotenv import load_dotenv
 from google.oauth2 import service_account
 
 def upload_records_jsonl_to_gcs(records: List[Dict]) -> str:
+    # Load env if desired
+    load_dotenv()
+
     bucket_name = os.environ["BUCKET"]
+    # Default to True so you get gzip unless you opt out
     compress = os.getenv("COMPRESS_JSONL", "true").lower() == "true"
     prefix = os.getenv("GCS_PREFIX", "quickbase_exports/")
     project = os.getenv("PROJECT_NAME")
@@ -23,24 +27,26 @@ def upload_records_jsonl_to_gcs(records: List[Dict]) -> str:
     client = storage.Client(credentials=credentials, project=project)
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(blob_name)
+
+    # Optional: tune multipart upload chunk size (5 MiB here)
     blob.chunk_size = 5 * 1024 * 1024
 
+    # NDJSON content type; add gzip encoding when compressed
+    blob.content_type = "application/x-ndjson"
     if compress:
-        blob.content_type = "application/gzip"
         blob.content_encoding = "gzip"
-    else:
-        blob.content_type = "application/x-ndjson"
 
-    # Write bytes to avoid TextIOWrapper/flush issues
+    # Write bytes to the object; wrap in gzip if compressing
     with blob.open("wb") as raw_fh:
         if compress:
-            with gzip.GzipFile(fileobj=raw_fh, mode="wb") as gz_fh:
+            # mtime=0 makes gzip output deterministic/reproducible
+            with gzip.GzipFile(fileobj=raw_fh, mode="wb", compresslevel=6, mtime=0) as gz_fh:
                 for rec in records:
-                    line = json.dumps(rec, ensure_ascii=False, default=str) + "\n"
-                    gz_fh.write(line.encode("utf-8"))
+                    line = (json.dumps(rec, ensure_ascii=False, default=str) + "\n").encode("utf-8")
+                    gz_fh.write(line)
         else:
             for rec in records:
-                line = json.dumps(rec, ensure_ascii=False, default=str) + "\n"
-                raw_fh.write(line.encode("utf-8"))
+                line = (json.dumps(rec, ensure_ascii=False, default=str) + "\n").encode("utf-8")
+                raw_fh.write(line)
 
     return f"gs://{bucket_name}/{blob_name}"

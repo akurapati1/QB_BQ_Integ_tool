@@ -2,7 +2,7 @@
 __pycache__/
 *.py[codz]
 *$py.class
-qb-companies-77fce00085df.json
+*.json
 # C extensions
 *.so
 .json
@@ -133,7 +133,7 @@ celerybeat.pid
 
 # SageMath parsed files
 *.sage.py
-
+myenv/
 # Environments
 .env
 .envrc
